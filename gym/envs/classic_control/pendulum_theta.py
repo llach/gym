@@ -17,7 +17,7 @@ class PendulumThetaEnv(gym.Env):
         self.viewer = None
         self.th_old = None
 
-        high = np.array([1., 1.]) #, self.max_speed])
+        high = np.array([1., 1., 1., 1.]) #, self.max_speed])
         self.action_space = spaces.Box(low=-self.max_torque, high=self.max_torque, shape=(1,), dtype=np.float32)
         self.observation_space = spaces.Box(low=-high, high=high, dtype=np.float32)
 
