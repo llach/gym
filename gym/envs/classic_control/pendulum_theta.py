@@ -17,7 +17,7 @@ class PendulumThetaEnv(gym.Env):
         self.viewer = None
         self.th_old = None
 
-        high = np.array([1., 1., 1., 1.]) #, self.max_speed])
+        high = np.array([1., 1., self.max_speed]) #, self.max_speed])
         self.action_space = spaces.Box(low=-self.max_torque, high=self.max_torque, shape=(1,), dtype=np.float32)
         self.observation_space = spaces.Box(low=-high, high=high, dtype=np.float32)
 
@@ -57,7 +57,8 @@ class PendulumThetaEnv(gym.Env):
 
     def _get_obs(self):
         theta, thetadot = self.state
-        return np.array([np.sin(theta), np.cos(theta), np.sin(self.th_old), np.cos(self.th_old)])
+        thed = np.clip(np.dot(theta, self.th_old), -self.max_speed, self.max_speed)
+        return np.array([np.sin(theta), np.cos(theta), thed])
 
     def render(self, mode='human', with_u=False):
 
