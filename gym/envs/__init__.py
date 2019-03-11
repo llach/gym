@@ -85,7 +85,7 @@ register(
 )
 
 register(
-    id='PendulumTheta-v0',
+    id='PendulumThetaStack-v0',
     entry_point='gym.envs.classic_control:PendulumThetaEnv',
     max_episode_steps=200,
 )

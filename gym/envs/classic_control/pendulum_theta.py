@@ -4,6 +4,8 @@ from gym.utils import seeding
 import numpy as np
 from os import path
 
+from collections import deque
+
 class PendulumThetaEnv(gym.Env):
     metadata = {
         'render.modes' : ['human', 'rgb_array'],
@@ -17,11 +19,24 @@ class PendulumThetaEnv(gym.Env):
         self.viewer = None
         self.th_old = None
 
+        self.k = 4
+
         high = np.array([1., 1., self.max_speed])
         self.action_space = spaces.Box(low=-self.max_torque, high=self.max_torque, shape=(1,), dtype=np.float32)
-        self.observation_space = spaces.Box(low=-high, high=high, dtype=np.float32)
+        self.observation_space = spaces.Box(low=-np.infty, high=np.infty, shape=(self.k,), dtype=np.float)
+
+        self.buf = deque(maxlen=self.k)
+        self._reset_buffer()
 
         self.seed()
+
+    def _reset_buffer(self):
+        for _ in range(self.k):
+            self.buf.appendleft(0)
+
+    def _process(self):
+        self.buf.appendleft(self.state[0])
+        return np.asarray(self.buf.copy(), dtype=np.float)
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -46,14 +61,15 @@ class PendulumThetaEnv(gym.Env):
         newthdot = np.clip(newthdot, -self.max_speed, self.max_speed) #pylint: disable=E1111
 
         self.state = np.array([newth, newthdot])
-        return self._get_obs(), -costs, False, {}
+        return self._process(), -costs, False, {}
 
     def reset(self):
         high = np.array([np.pi, 1])
         self.state = self.np_random.uniform(low=-high, high=high)
         self.th_old = self.state[0]
         self.last_u = None
-        return self._get_obs()
+        self._reset_buffer()
+        return self._process()
 
     def _get_obs(self):
         theta, thetadot = self.state
