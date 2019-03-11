@@ -23,7 +23,7 @@ class PendulumThetaEnv(gym.Env):
 
         high = np.array([1., 1., self.max_speed])
         self.action_space = spaces.Box(low=-self.max_torque, high=self.max_torque, shape=(1,), dtype=np.float32)
-        self.observation_space = spaces.Box(low=-np.infty, high=np.infty, shape=(self.k,), dtype=np.float)
+        self.observation_space = spaces.Box(low=-np.infty, high=np.infty, shape=(2*self.k-1,), dtype=np.float)
 
         self.buf = deque(maxlen=self.k)
         self._reset_buffer()
@@ -36,7 +36,8 @@ class PendulumThetaEnv(gym.Env):
 
     def _process(self):
         self.buf.appendleft(angle_normalize(self.state[0]))
-        return np.asarray(self.buf.copy(), dtype=np.float)
+        delta_ths = np.diff(self.buf)
+        return np.append(np.asarray(self.buf.copy(), dtype=np.float), delta_ths)
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
