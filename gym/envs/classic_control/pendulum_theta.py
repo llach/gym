@@ -35,7 +35,7 @@ class PendulumThetaEnv(gym.Env):
             self.buf.appendleft(0)
 
     def _process(self):
-        self.buf.appendleft(self.state[0])
+        self.buf.appendleft(angle_normalize(self.state[0]))
         return np.asarray(self.buf.copy(), dtype=np.float)
 
     def seed(self, seed=None):
