@@ -78,8 +78,8 @@ class PendulumVisualEnv(gym.Env):
         cr.set_source_rgb(0, 0, 0)
         cr.fill()
 
-        # reshape, delete fourth (alpha) channel and greyscale
-        return np.expand_dims(np.dot(np.frombuffer(self.surf.get_data(), np.uint8).reshape([self.w, self.h, 4])[..., :3], [0.299, 0.587, 0.114]), -1)
+        # reshape, delete fourth (alpha) channel, greyscale and normalise
+        return np.expand_dims(np.dot(np.frombuffer(self.surf.get_data(), np.uint8).reshape([self.w, self.h, 4])[..., :3], [0.299, 0.587, 0.114]), -1)/255
 
     def _get_obs(self):
         return self._render_pendulum()
