@@ -18,9 +18,8 @@ class PendulumVisualEnv(gym.Env):
         self.w , self.h = 64, 64
         self.surf = cairo.ImageSurface(cairo.FORMAT_RGB24, self.w, self.h)
 
-        high = np.array([1., 1., self.max_speed])
         self.action_space = spaces.Box(low=-self.max_torque, high=self.max_torque, shape=(1,), dtype=np.float32)
-        self.observation_space = spaces.Box(low=-high, high=high, dtype=np.float32)
+        self.observation_space = spaces.Box(low=0, high=1, shape=(64, 64, 1), dtype=np.float32)
 
         self.seed()
 
