@@ -91,6 +91,12 @@ register(
 )
 
 register(
+    id='PendulumTest-v0',
+    entry_point='gym.envs.classic_control:PendulumTestEnv',
+    max_episode_steps=200,
+)
+
+register(
     id='PendulumVisual-v0',
     entry_point='gym.envs.classic_control:PendulumVisualEnv',
     max_episode_steps=200,
