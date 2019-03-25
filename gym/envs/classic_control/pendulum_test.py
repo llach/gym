@@ -47,7 +47,6 @@ class PendulumTestEnv(gym.Env):
             cv2.namedWindow('pendulum')
 
         img = resize(self.frame_t.copy(), [512, 512], mode='reflect', anti_aliasing=True)
-        print(img.shape, img.dtype)
         cv2.putText(img, 'theta {:.3}'.format(angle_normalize(self._get_theta())), (20, 30),
                     cv2.FONT_HERSHEY_SIMPLEX, 1, .5, 2)
 
