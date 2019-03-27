@@ -2,9 +2,9 @@ import gym
 from gym import spaces
 from gym.utils import seeding
 import numpy as np
-from os import path
 
 from collections import deque
+from .pendulum import PendulumEnv
 
 class PendulumThetaEnv(gym.Env):
     metadata = {
@@ -13,103 +13,44 @@ class PendulumThetaEnv(gym.Env):
     }
 
     def __init__(self):
-        self.max_speed=8
-        self.max_torque=2.
-        self.dt=.05
-        self.viewer = None
-        self.th_old = None
+        self.env = PendulumEnv()
+        self.k = 5
 
-        self.k = 3
-
-        # high = np.array([1., 1.]*(self.k*2))
-        self.action_space = spaces.Box(low=-self.max_torque, high=self.max_torque, shape=(1,), dtype=np.float32)
-        self.observation_space = spaces.Box(low=-np.infty, high=np.infty, shape=(2*self.k,), dtype=np.float)
+        self.observation_space = spaces.Box(low=-1, high=1, shape=(2*self.k,), dtype=np.float32)
+        self.action_space = self.env.action_space
 
         self.buf = deque(maxlen=2*self.k)
         self._reset_buffer()
 
         self.seed()
 
-    def _reset_buffer(self):
-        for _ in range(2*self.k):
-            self.buf.appendleft(0)
-
-    def _process(self):
-        self.buf.appendleft(np.sin(self.state[0]))
-        self.buf.appendleft(np.cos(self.state[0]))
-        return np.asarray(self.buf.copy(), dtype=np.float)
-
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
+    def __getattr__(self, item):
+        return getattr(self.env, item)
+
+    def _reset_buffer(self):
+        for _ in range(2*self.k):
+            self.buf.appendleft(0)
+
+    def _update_buffer(self):
+        th = self.env.get_theta()
+
+        self.buf.appendleft(np.sin(th))
+        self.buf.appendleft(np.cos(th))
+
+        return np.asarray(self.buf.copy(), dtype=np.float32)
+
     def step(self,u):
-        th, thdot = self.state # th := theta
-
-        self.th_old = th
-
-        g = 10.
-        m = 1.
-        l = 1.
-        dt = self.dt
-
-        u = np.clip(u, -self.max_torque, self.max_torque)[0]
-        self.last_u = u # for rendering
-        costs = angle_normalize(th)**2 + .1*thdot**2 + .001*(u**2)
-
-        newthdot = thdot + (-3*g/(2*l) * np.sin(th + np.pi) + 3./(m*l**2)*u) * dt
-        newth = th + newthdot*dt
-        newthdot = np.clip(newthdot, -self.max_speed, self.max_speed) #pylint: disable=E1111
-
-        self.state = np.array([newth, newthdot])
-        return self._process(), -costs, False, {}
+        _, reward, done, info = self.env.step(u)
+        return self._update_buffer(), reward, done, info
 
     def reset(self):
-        high = np.array([np.pi, 1])
-        self.state = self.np_random.uniform(low=-high, high=high)
-        self.th_old = self.state[0]
-        self.last_u = None
+        self.env.reset()
         self._reset_buffer()
-        return self._process()
+        return self._update_buffer()
 
-    def _get_obs(self):
-        theta, thetadot = self.state
-        thed = (theta - self.th_old) / 0.05
-        thed = np.clip(thed, -self.max_speed, self.max_speed)
-        return np.array([np.sin(theta), np.cos(theta), thed])
-
-    def render(self, mode='human', with_u=False):
-
-        if self.viewer is None:
-            from gym.envs.classic_control import rendering
-            self.viewer = rendering.Viewer(500,500)
-            self.viewer.set_bounds(-2.2,2.2,-2.2,2.2)
-            rod = rendering.make_capsule(1, .2)
-            rod.set_color(.8, .3, .3)
-            self.pole_transform = rendering.Transform()
-            rod.add_attr(self.pole_transform)
-            self.viewer.add_geom(rod)
-            axle = rendering.make_circle(.05)
-            axle.set_color(0,0,0)
-            self.viewer.add_geom(axle)
-            if with_u:
-                fname = path.join(path.dirname(__file__), "assets/clockwise.png")
-                self.img = rendering.Image(fname, 1., 1.)
-                self.imgtrans = rendering.Transform()
-                self.img.add_attr(self.imgtrans)
-
-        if with_u:
-            self.viewer.add_onetime(self.img)
-        self.pole_transform.set_rotation(self.state[0] + np.pi/2)
-        if with_u and self.last_u:
-            self.imgtrans.scale = (-self.last_u/2, np.abs(self.last_u)/2)
-
-        return self.viewer.render(return_rgb_array = mode=='rgb_array')
-
-    def close(self):
-        if self.viewer:
-            self.viewer.close()
-            self.viewer = None
-
-def angle_normalize(x):
-    return (((x+np.pi) % (2*np.pi)) - np.pi)
+    def render(self, mode='human'):
+        return self.env.render(mode, False)

@@ -6,24 +6,24 @@ from skimage.transform import resize
 from gym import spaces
 from gym.utils import seeding
 import numpy as np
+from .pendulum import PendulumEnv
 
 
 class PendulumVisualEnv(gym.Env):
 
     def __init__(self):
-        self.max_speed=8
-        self.max_torque=2.
-        self.dt=.05
+        self.env = PendulumEnv()
 
         # rendering things
         self.w, self.h = 64, 64
         self.surf = cairo.ImageSurface(cairo.FORMAT_RGB24, self.w, self.h)
 
-        self.action_space = spaces.Box(low=-self.max_torque, high=self.max_torque, shape=(1,), dtype=np.float32)
+        self.action_space = self.env.action_space
         self.observation_space = spaces.Box(low=0, high=1, shape=(64, 64, 1), dtype=np.float32)
+
         self.frame_t = None
         self.has_window = False
-        self.costs = 0
+        self.reward = 0
 
         self.seed()
 
@@ -31,31 +31,29 @@ class PendulumVisualEnv(gym.Env):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
-    def step(self,u):
-        th, thdot = self.state # th := theta
+    def step(self, u):
+        # pendulum env calculates new th & thdot given force u
+        _, reward, done, info = self.env.step(u)
 
-        g = 10.
-        m = 1.
-        l = 1.
-        dt = self.dt
+        # we save th
+        self.th = self.env.get_theta()
+        self.reward = reward
 
-        u = np.clip(u, -self.max_torque, self.max_torque)[0]
-        self.last_u = u # for rendering
-        costs = angle_normalize(th)**2 + .1*thdot**2 + .001*(u**2)
-        self.costs = float(costs)
+        # render current pendulum based on th_t
+        self.frame_t = self._render_pendulum()
 
-        newthdot = thdot + (-3*g/(2*l) * np.sin(th + np.pi) + 3./(m*l**2)*u) * dt
-        newth = th + newthdot*dt
-        newthdot = np.clip(newthdot, -self.max_speed, self.max_speed) #pylint: disable=E1111
-
-        self.state = np.array([newth, newthdot])
-        return self._get_obs(), -costs, False, {}
+        return self.frame_t.copy(), reward, done, info
 
     def reset(self):
-        high = np.array([np.pi, 1])
-        self.state = self.np_random.uniform(low=-high, high=high)
-        self.last_u = None
-        return self._get_obs()
+        self.env.reset()
+
+        # we save th
+        self.th = self.env.get_theta()
+
+        # render current pendulum based on th_t
+        self.frame_t = self._render_pendulum()
+
+        return self.frame_t.copy()
 
     def render(self, mode=''):
         if self.frame_t is None: return
@@ -64,10 +62,10 @@ class PendulumVisualEnv(gym.Env):
             cv2.namedWindow('pendulum')
 
         img = resize(self.frame_t.copy(), [512, 512], mode='reflect', anti_aliasing=True)
-        cv2.putText(img, 'theta {:.3}'.format(angle_normalize(self._get_theta())), (20, 30),
+        cv2.putText(img, 'theta {:.3}'.format(angle_normalize(self.th)), (20, 30),
                     cv2.FONT_HERSHEY_SIMPLEX, 1, .5, 2)
 
-        cv2.putText(img, 'costs {:.3}'.format(self.costs), (250, 30),
+        cv2.putText(img, 'costs {:.3}'.format(float(self.reward)), (250, 30),
                     cv2.FONT_HERSHEY_SIMPLEX, 1, .5, 2)
 
         cv2.imshow('pendulum', img)
@@ -82,7 +80,7 @@ class PendulumVisualEnv(gym.Env):
 
         # apply transforms
         cr.translate((self.w / 2), self.h / 2)
-        cr.rotate(np.pi-self.state[0])
+        cr.rotate(np.pi-self.th)
 
         # draw shapes that form the capsule
         cr.rectangle(-2.5, 0, 5, 27)
@@ -100,13 +98,6 @@ class PendulumVisualEnv(gym.Env):
 
         # reshape, delete fourth (alpha) channel, greyscale and normalise
         return np.expand_dims(np.dot(np.frombuffer(self.surf.get_data(), np.uint8).reshape([self.w, self.h, 4])[..., :3], [0.299, 0.587, 0.114]), -1)/255
-
-    def _get_obs(self):
-        self.frame_t = self._render_pendulum()
-        return self.frame_t
-
-    def _get_theta(self):
-        return float(self.state[0])
 
 def angle_normalize(x):
     return (((x+np.pi) % (2*np.pi)) - np.pi)

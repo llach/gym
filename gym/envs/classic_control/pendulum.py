@@ -55,6 +55,9 @@ class PendulumEnv(gym.Env):
         theta, thetadot = self.state
         return np.array([np.cos(theta), np.sin(theta), thetadot])
 
+    def get_theta(self):
+        return float(self.state[0])
+
     def render(self, mode='human', with_u=False):
 
         if self.viewer is None:
