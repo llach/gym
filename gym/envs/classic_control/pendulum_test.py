@@ -5,15 +5,22 @@ import cairocffi as cairo
 
 from skimage.transform import resize
 
+from gym import spaces
+from gym.utils import seeding
+from .pendulum import PendulumEnv
 
 class PendulumTestEnv(gym.Env):
     ''' For debugging pendulum env. in each episode, theta grows from 0 to 2*PI in N steps. '''
 
     def __init__(self, steps=20):
+        self.env = PendulumEnv()
 
         # rendering things
         self.w , self.h = 64, 64
         self.surf = cairo.ImageSurface(cairo.FORMAT_RGB24, self.w, self.h)
+
+        self.action_space = self.env.action_space
+        self.observation_space = spaces.Box(low=0, high=1, shape=(64, 64, 1), dtype=np.float32)
 
         self.steps = steps
         self.thetas = np.linspace(0, 2*np.pi, self.steps)
@@ -21,6 +28,12 @@ class PendulumTestEnv(gym.Env):
 
         self.frame_t = None
         self.has_window = False
+
+        self.seed()
+
+    def seed(self, seed=None):
+        self.np_random, seed = seeding.np_random(seed)
+        return [seed]
 
     def _get_theta(self):
         return self.thetas[self.t]
