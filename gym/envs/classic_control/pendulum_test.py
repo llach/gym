@@ -12,7 +12,7 @@ from .pendulum import PendulumEnv
 class PendulumTestEnv(gym.Env):
     ''' For debugging pendulum env. in each episode, theta grows from 0 to 2*PI in N steps. '''
 
-    def __init__(self, steps=20):
+    def __init__(self, steps=12):
         self.env = PendulumEnv()
 
         # rendering things
