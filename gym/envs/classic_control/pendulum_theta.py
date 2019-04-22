@@ -1,10 +1,12 @@
+from collections import deque
+
+import numpy as np
+
 import gym
 from gym import spaces
 from gym.utils import seeding
-import numpy as np
-
-from collections import deque
 from .pendulum import PendulumEnv
+
 
 class PendulumThetaEnv(gym.Env):
     metadata = {
@@ -12,9 +14,9 @@ class PendulumThetaEnv(gym.Env):
         'video.frames_per_second' : 30
     }
 
-    def __init__(self):
+    def __init__(self, k=1):
         self.env = PendulumEnv()
-        self.k = 5
+        self.k = k
 
         self.observation_space = spaces.Box(low=-1, high=1, shape=(2*self.k,), dtype=np.float32)
         self.action_space = self.env.action_space
