@@ -14,7 +14,7 @@ class PendulumThetaEnv(gym.Env):
         'video.frames_per_second' : 30
     }
 
-    def __init__(self, k=1):
+    def __init__(self, k=5):
         self.env = PendulumEnv()
         self.k = k
 
